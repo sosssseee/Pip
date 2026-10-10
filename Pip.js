@@ -1,26 +1,39 @@
 (function () {
+  function toast(t) {
+    try { Lampa.Noty.show(t); } catch (e) {}
+  }
+
   function pip() {
     var v = document.querySelector('video');
-    if (!v) return;
-    if (v.webkitSetPresentationMode) {
-      v.webkitSetPresentationMode(
-        v.webkitPresentationMode === 'picture-in-picture' ? 'inline' : 'picture-in-picture'
-      );
-    } else if (v.requestPictureInPicture) {
-      document.pictureInPictureElement ? document.exitPictureInPicture() : v.requestPictureInPicture();
+    if (!v) return toast('No video found');
+    v.removeAttribute('disablePictureInPicture');
+    try {
+      if (v.webkitSupportsPresentationMode && v.webkitSupportsPresentationMode('picture-in-picture')) {
+        v.webkitSetPresentationMode(
+          v.webkitPresentationMode === 'picture-in-picture' ? 'inline' : 'picture-in-picture'
+        );
+      } else if (document.pictureInPictureEnabled) {
+        document.pictureInPictureElement ? document.exitPictureInPicture() : v.requestPictureInPicture();
+      } else {
+        toast('PiP not supported here');
+      }
+    } catch (e) {
+      toast('PiP error: ' + e.message);
     }
   }
 
-  function inject() {
-    var panel = document.querySelector('.player-panel__right');
-    if (!panel || panel.querySelector('.pip-btn')) return;
-    var b = document.createElement('div');
-    b.className = 'player-panel__item selector pip-btn';
-    b.textContent = 'PiP';
-    b.style.cssText = 'padding:0 1em;font-weight:bold';
-    b.addEventListener('click', pip);
-    panel.prepend(b);
-  }
+  var btn = document.createElement('div');
+  btn.textContent = 'PiP';
+  btn.style.cssText =
+    'position:fixed;top:16px;right:16px;z-index:99999;padding:10px 16px;' +
+    'background:rgba(0,0,0,.6);color:#fff;border-radius:8px;font:bold 16px sans-serif;display:none';
+  btn.addEventListener('click', pip);
+  btn.addEventListener('touchend', function (e) { e.preventDefault(); pip(); });
+  document.body.appendChild(btn);
 
-  new MutationObserver(inject).observe(document.body, { childList: true, subtree: true });
+  setInterval(function () {
+    btn.style.display = document.querySelector('video') ? 'block' : 'none';
+  }, 1000);
+
+  toast('PiP plugin loaded');
 })();
